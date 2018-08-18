@@ -1,0 +1,13 @@
+translator:
+  provider:
+#    proxy:
+#      host: proxy-host
+#      port: proxy-port
+    maxsize: 3000
+  glossary:
+    path: glossaries.txt
+  blacklist:
+    equal:
+    contain:
+  file:
+    overwrite: false
