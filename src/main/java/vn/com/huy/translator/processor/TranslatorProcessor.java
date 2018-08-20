@@ -48,7 +48,7 @@ public class TranslatorProcessor {
     private String glossaryPath;
     @Value("${translator.file.overwrite}")
     private boolean overwrite;
-    @Value("${translator.provider.maxsize")
+    @Value("${translator.provider.maxsize}")
     private Integer maxSize;
     @Autowired
     private Encoder encoder;
