@@ -36,7 +36,7 @@ import vn.com.huy.translator.provider.TranslationProvider;
 public class TranslatorProcessor {
 
     private static final Logger LOG = LoggerFactory.getLogger(TranslatorProcessor.class);
-    public static final String BREAK_LINE = "<<< BRL >>>";
+    public static final String BREAK_LINE = "\r\n";
 
     private Map<String, String> glossaryMap = new HashMap<>();
 
@@ -125,7 +125,7 @@ public class TranslatorProcessor {
     private synchronized void processTranslation(ProgressManager progressManager, List<List<XWPFParagraph>> groupParagraphs, String sourceLanguage, String targetLanguage) {
 
         groupParagraphs.forEach(entry -> {
-            String text = entry.stream().map(x -> x.getParagraphText()).collect(Collectors.joining(BREAK_LINE));
+            String text = entry.stream().map(x -> x.getText()).collect(Collectors.joining(BREAK_LINE));
             List<String> keys = new ArrayList<>();
             List<String> values = new ArrayList<>();
             glossaryMap.entrySet().stream().forEach(e -> {
@@ -137,34 +137,39 @@ public class TranslatorProcessor {
             String translatedText = translationProvider.translate(text, sourceLanguage, targetLanguage);
             translatedText = StringUtils.replaceEach(translatedText, keys.toArray(new String[]{}), values.toArray(new String[]{}));
             String[] translateTexts = translatedText.split(BREAK_LINE);
-
-            for (int i = 0; i < entry.size(); i++) {
-                XWPFRun run = entry.get(i).createRun();
-                run.addBreak(BreakType.TEXT_WRAPPING);
-                textDecorator.decorate(run, translateTexts[i]);
-            }
             try {
-                Thread.sleep(5000);
-            } catch (InterruptedException e) {
-                // Do no thing
-            }
-            progressManager.step();
-        });
-    }
+                for (int i = 0; i < entry.size(); i++) {
+                    XWPFRun run = entry.get(i).createRun();
+                    run.addBreak(BreakType.TEXT_WRAPPING);
+                    textDecorator.decorate(run, translateTexts[i]);
+                }
+
+            Thread.sleep(5000);
+        } catch( InterruptedException e){
+            // Do no thing
+        } catch (ArrayIndexOutOfBoundsException e) {
+                LOG.error(e.getMessage(), e);
+                LOG.info("ORIGINAL: {}", text);
+                LOG.info("TRANSLATED: {}", translatedText);
+         }
+        progressManager.step();
+    });
+}
 
     private List<List<XWPFParagraph>> createXWPFParagraphGroups(List<XWPFParagraph> paragraphs) {
-        List<XWPFParagraph> xwpfParagraphs = paragraphs.stream().filter(paragraph -> (normalize(paragraph.getText()).isEmpty()
+        List<XWPFParagraph> xwpfParagraphs = paragraphs.stream().filter(paragraph -> !(normalize(paragraph.getText()).isEmpty()
                 || StringUtils.containsAny(normalize(paragraph.getText()), blacklistContain.toArray(new String[blacklistContain.size()]))
                 || StringUtils.equalsAny(normalize(paragraph.getText()), blacklistEqual.toArray(new String[blacklistEqual.size()])))).collect(Collectors.toList());
         List<List<XWPFParagraph>> groupParagraphs = new ArrayList<>();
         String text = "";
-        List<XWPFParagraph> groupXWPFParagraph = new ArrayList<>();
-        groupParagraphs.add(groupXWPFParagraph);
+        List<XWPFParagraph> groupXWPFParagraph = null;
+
+
         for (int i = 0; i < xwpfParagraphs.size(); i++) {
             XWPFParagraph xwpfParagraph = xwpfParagraphs.get(i);
-            if (StringUtils.isNoneBlank(xwpfParagraph.getParagraphText())) {
-                text += xwpfParagraph.getParagraphText();
-                if (text.length() > maxSize) {
+            if (StringUtils.isNoneBlank(xwpfParagraph.getText())) {
+                text += xwpfParagraph.getText();
+                if (text.length() > maxSize || groupXWPFParagraph == null) {
                     groupXWPFParagraph = new ArrayList<>();
                     groupParagraphs.add(groupXWPFParagraph);
                     text = "";
@@ -179,7 +184,7 @@ public class TranslatorProcessor {
         glossaries
                 .stream()
                 .map(StringUtils::trimToEmpty)
-                        // TODO case-sensitive?
+                // TODO case-sensitive?
                 .forEach(g -> glossaryMap.put(encoder.encode(g), g));
     }
 

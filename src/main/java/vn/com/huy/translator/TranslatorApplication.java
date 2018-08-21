@@ -32,7 +32,6 @@ public class TranslatorApplication {
         // 3rd: translated language
         String targetLanguage = args[2];
 
-
         AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(TranslatorApplicationConfig.class);
         TranslatorProcessor translatorProcessor = context.getBean(TranslatorProcessor.class);
         translatorProcessor.prepare();
