@@ -3,7 +3,7 @@ translator:
 #    proxy:
 #      host: proxy-host
 #      port: proxy-port
-    maxsize: 3000
+    maxsize: 4000
   glossary:
     path: glossaries.txt
   blacklist:
