@@ -144,7 +144,7 @@ public class TranslatorProcessor {
                     textDecorator.decorate(run, translateTexts[i]);
                 }
 
-            Thread.sleep(5000);
+            Thread.sleep(10000);
         } catch( InterruptedException e){
             // Do no thing
         } catch (ArrayIndexOutOfBoundsException e) {
