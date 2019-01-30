@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.lang.*?>
+<?import java.util.*?>
+<?import javafx.scene.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<?import javafx.scene.control.cell.TextFieldListCell?>
+<VBox xmlns="http://javafx.com/javafx"
+            xmlns:fx="http://javafx.com/fxml"
+            fx:controller="vn.com.huy.translator.client.TranslatorController"
+            prefHeight="1000.0" prefWidth="1000.0">
+
+    <VBox prefHeight="50"></VBox>
+    <VBox>
+        <GridPane>
+            <columnConstraints>
+                <ColumnConstraints prefWidth="50"/>
+                <ColumnConstraints prefWidth="140"/>
+                <ColumnConstraints prefWidth="400"/>
+                <ColumnConstraints prefWidth="100"/>
+                <ColumnConstraints prefWidth="100"/>
+                <ColumnConstraints/>
+            </columnConstraints>
+            <Label text="File Path">
+                <GridPane.columnIndex>1</GridPane.columnIndex>
+                <GridPane.rowIndex>0</GridPane.rowIndex>
+            </Label>
+            <Label fx:id="lblPath">
+                <GridPane.columnIndex>2</GridPane.columnIndex>
+                <GridPane.rowIndex>0</GridPane.rowIndex>
+            </Label>
+            <Button fx:id="btnBrowser" text="Browser" onAction="#handledBrowserAction">
+                <GridPane.columnIndex>3</GridPane.columnIndex>
+                <GridPane.rowIndex>0</GridPane.rowIndex>
+            </Button>
+            <Button fx:id="btnSave" onAction="#handledSaveAction" text="Save">
+                <GridPane.columnIndex>4</GridPane.columnIndex>
+                <GridPane.rowIndex>0</GridPane.rowIndex>
+            </Button>
+        </GridPane>
+    </VBox>
+    <VBox prefHeight="50"></VBox>
+    <VBox style="-fx-background:red">
+        <GridPane  style="-fx-background:red">
+            <columnConstraints>
+                <ColumnConstraints prefWidth="50" maxWidth="50"/>
+                <ColumnConstraints prefWidth="450" />
+                <ColumnConstraints prefWidth="40"/>
+                <ColumnConstraints  prefWidth="450" />
+                <ColumnConstraints prefWidth="50" maxWidth="50"/>
+            </columnConstraints>
+            <ListView prefHeight="600" fx:id="lvSource" style="-fx-background:red">
+                <GridPane.columnIndex>1</GridPane.columnIndex>
+                <GridPane.rowIndex>0</GridPane.rowIndex>
+            </ListView>
+            <ListView fx:id="lvDest">
+                <GridPane.columnIndex>3</GridPane.columnIndex>
+                <GridPane.rowIndex>0</GridPane.rowIndex>
+            </ListView>
+        </GridPane>
+    </VBox>
+</VBox>

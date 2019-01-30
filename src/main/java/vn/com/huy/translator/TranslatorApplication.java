@@ -37,12 +37,12 @@ public class TranslatorApplication {
         translatorProcessor.prepare();
 
         // TODO parallel to boost the speed?
-        try (Stream<Path> stream = Files.list(Paths.get(path))) {
-            stream
-                    .filter(file -> !file.toFile().isHidden())
-                    .filter(file -> file.getFileName().toString().endsWith(translatorProcessor.getSupportedExtension()))
-                    .forEach(file -> translatorProcessor.processFile(file, sourceLanguage, targetLanguage));
-        }
+//        try (Stream<Path> stream = Files.list(Paths.get(path))) {
+//            stream
+//                    .filter(file -> !file.toFile().isHidden())
+//                    .filter(file -> file.getFileName().toString().endsWith(translatorProcessor.getSupportedExtension()))
+//                    .forEach(file -> translatorProcessor.processFile(file, sourceLanguage, targetLanguage));
+//        }
         LOG.info("DONE");
     }
 

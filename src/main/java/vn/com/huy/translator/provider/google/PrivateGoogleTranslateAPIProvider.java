@@ -31,19 +31,20 @@ public class PrivateGoogleTranslateAPIProvider extends ExternalTranslationProvid
                     "&tl=" + langOut +
                     "&dt=t&q=" + URLEncoder.encode(text, "UTF-8");
 
-            URL url = new URL(urlStr);
-            URLConnection con = url.openConnection(proxy);
-            con.setRequestProperty("User-Agent", "Mozilla/5.0");
-
-            try (BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream(), StandardCharsets.UTF_8) )) {
-                String inputLine;
-                StringBuilder response = new StringBuilder();
-                while ((inputLine = in.readLine()) != null) {
-                    response.append(inputLine);
-                }
-
-                return parseResult(response.toString());
-            }
+//            URL url = new URL(urlStr);
+//            URLConnection con = url.openConnection();
+//            con.setRequestProperty("User-Agent", "Mozilla/5.0");
+//            con.setConnectTimeout(20000);
+//            try (BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream(), StandardCharsets.UTF_8) )) {
+//                String inputLine;
+//                StringBuilder response = new StringBuilder();
+//                while ((inputLine = in.readLine()) != null) {
+//                    response.append(inputLine);
+//                }
+//
+                return text;
+//                return parseResult(response.toString());
+//            }
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

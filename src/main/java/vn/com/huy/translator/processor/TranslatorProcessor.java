@@ -12,9 +12,11 @@ import java.util.stream.Collectors;
 
 import javax.annotation.PostConstruct;
 
+import org.apache.commons.codec.digest.Md5Crypt;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.poi.xwpf.usermodel.BreakType;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
 import org.apache.poi.xwpf.usermodel.XWPFParagraph;
@@ -26,10 +28,14 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import lombok.Getter;
+import sun.security.provider.MD5;
+import sun.security.provider.SHA;
+import sun.security.rsa.RSASignature;
 import vn.com.huy.translator.decorator.TextDecorator;
 import vn.com.huy.translator.encoder.Encoder;
 import vn.com.huy.translator.progress.ProgressManager;
 import vn.com.huy.translator.provider.TranslationProvider;
+import vn.com.huy.translator.util.MD5Util;
 
 @Component
 @Getter
@@ -41,15 +47,15 @@ public class TranslatorProcessor {
     private Map<String, String> glossaryMap = new HashMap<>();
 
     @Value("${translator.blacklist.equal}")
-    private List<String> blacklistEqual;
+    private List<String> blacklistEqual = new ArrayList<>();
     @Value("${translator.blacklist.contain}")
-    private List<String> blacklistContain;
+    private List<String> blacklistContain =  new ArrayList<>();
     @Value("${translator.glossary.path}")
     private String glossaryPath;
     @Value("${translator.file.overwrite}")
     private boolean overwrite;
     @Value("${translator.provider.maxsize}")
-    private Integer maxSize;
+    private Integer maxSize = 1700;
     @Autowired
     private Encoder encoder;
     @Autowired
@@ -83,46 +89,47 @@ public class TranslatorProcessor {
         return ".docx";
     }
 
-    public final void processFile(Path path, String srcLang, String targetLang) {
-        try {
-            String originalFullName = path.toFile().getName();
-            String originalBaseName = FilenameUtils.getBaseName(originalFullName);
-            LOG.info("Translating file: {}", originalFullName);
+    public static class Out {
+        XWPFDocument doc;
+        List<Pair<String, List<XWPFParagraph>>> result;
 
-            String translatedFileName = StringUtils.replace(originalBaseName, "_" + srcLang, "_" + targetLang) + getSupportedExtension();
+        public XWPFDocument getDoc() {
+            return doc;
+        }
 
-            Path destFolder = Paths.get(path.getParent().toString(), targetLang);
-            // Create folder if needed
-            destFolder.toFile().mkdirs();
 
-            if (Paths.get(destFolder.toString(), translatedFileName).toFile().exists() && !overwrite) {
-                LOG.info("File {} was already translated ({})", originalBaseName, translatedFileName);
-                return;
-            }
-
-            try (InputStream in = Files.newInputStream(path);
-                 OutputStream out = Files.newOutputStream(Paths.get(destFolder.toString(), translatedFileName));
-                 XWPFDocument doc = new XWPFDocument(in)) {
+        public List<Pair<String, List<XWPFParagraph>>> getResult() {
+            return result;
+        }
+    }
+    public final  Out processFile(XWPFDocument doc, String srcLang, String targetLang) {
+        List<Pair<String, List<XWPFParagraph>>> result= new ArrayList<>();
+            Out output = new Out();
+            try  {
                 List<XWPFParagraph> paragraphs = doc.getParagraphs();
                 List<XWPFParagraph> paragraphsInTables = doc.getTables().stream()
                         .flatMap(table -> table.getRows().stream())
                         .flatMap(row -> row.getTableCells().stream())
                         .flatMap(cell -> cell.getParagraphs().stream())
                         .collect(Collectors.toList());
-
+//
                 List<List<XWPFParagraph>> paragraphGroups = createXWPFParagraphGroups(paragraphs);
                 List<List<XWPFParagraph>> tableParagraphGroups = createXWPFParagraphGroups(paragraphsInTables);
                 ProgressManager progressManager = new ProgressManager(paragraphGroups.size() + tableParagraphGroups.size());
-                processTranslation(progressManager, paragraphGroups, srcLang, targetLang);
-                processTranslation(progressManager, tableParagraphGroups, srcLang, targetLang);
-                doc.write(out);
-            }
+                result.addAll( processTranslation(progressManager, paragraphGroups, srcLang, targetLang));
+                result.addAll(               processTranslation(progressManager, tableParagraphGroups, srcLang, targetLang));
+                output.doc = doc;
+                output.result = result;
+                return output;
+//            }
         } catch (Exception ex) {
-            LOG.error("Error when processing file: " + path, ex);
+//            LOG.error("Error when processing file: " + path, ex);
+            throw new RuntimeException(ex);
         }
     }
 
-    private synchronized void processTranslation(ProgressManager progressManager, List<List<XWPFParagraph>> groupParagraphs, String sourceLanguage, String targetLanguage) {
+    private synchronized List<Pair<String, List<XWPFParagraph>>> processTranslation(ProgressManager progressManager, List<List<XWPFParagraph>> groupParagraphs, String sourceLanguage, String targetLanguage) {
+        List<Pair<String, List<XWPFParagraph>>> paragraphs =new ArrayList<>();
 
         groupParagraphs.forEach(entry -> {
             String text = entry.stream().map(x -> x.getText()).collect(Collectors.joining(BREAK_LINE));
@@ -134,26 +141,29 @@ public class TranslatorProcessor {
             });
 
             text = StringUtils.replaceEach(text, values.toArray(new String[]{}), keys.toArray(new String[]{}));
-            String translatedText = translationProvider.translate(text, sourceLanguage, targetLanguage);
-            translatedText = StringUtils.replaceEach(translatedText, keys.toArray(new String[]{}), values.toArray(new String[]{}));
-            String[] translateTexts = translatedText.split(BREAK_LINE);
-            try {
-                for (int i = 0; i < entry.size(); i++) {
-                    XWPFRun run = entry.get(i).createRun();
-                    run.addBreak(BreakType.TEXT_WRAPPING);
-                    textDecorator.decorate(run, translateTexts[i]);
-                }
+            paragraphs.add(Pair.of(text, entry));
 
-            Thread.sleep(10000);
-        } catch( InterruptedException e){
-            // Do no thing
-        } catch (ArrayIndexOutOfBoundsException e) {
-                LOG.error(e.getMessage(), e);
-                LOG.info("ORIGINAL: {}", text);
-                LOG.info("TRANSLATED: {}", translatedText);
-         }
+//            String translatedText = translationProvider.translate(text, sourceLanguage, targetLanguage);
+//            translatedText = StringUtils.replaceEach(translatedText, keys.toArray(new String[]{}), values.toArray(new String[]{}));
+//            String[] translateTexts = translatedText.split(BREAK_LINE);
+//            try {
+//                for (int i = 0; i < entry.size(); i++) {
+//                    XWPFRun run = entry.get(i).createRun();
+//                    run.addBreak(BreakType.TEXT_WRAPPING);
+//                    textDecorator.decorate(run, translateTexts[i]);
+//                }
+//
+//            Thread.sleep(10000);
+//        } catch( InterruptedException e){
+//            // Do no thing
+//        } catch (ArrayIndexOutOfBoundsException e) {
+//                LOG.error(e.getMessage(), e);
+//                LOG.info("ORIGINAL: {}", text);
+//                LOG.info("TRANSLATED: {}", translatedText);
+//         }
         progressManager.step();
     });
+        return paragraphs;
 }
 
     private List<List<XWPFParagraph>> createXWPFParagraphGroups(List<XWPFParagraph> paragraphs) {
